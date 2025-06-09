@@ -1,4 +1,4 @@
-#Modular Ethereum Extensions; Offloading specialized, semi-critical logics from the Execution Layer client.
+# Modular Ethereum Extensions; Offloading specialized, semi-critical logics from the Execution Layer client.
 
 A standard interface for adding custom logics/extensions to ethereum clinets with no concensus layer change and no hard fork required, 
 it's a protocol-adjacent layer that enables a group of ethereum clients to define a new set of API endponts along with custom a transaction type with a unified p2p sub-pool that interacts directly with ethereum main public mempool.
