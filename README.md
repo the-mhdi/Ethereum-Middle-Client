@@ -6,5 +6,6 @@ it's a protocol-adjacent layer that enables a group of ethereum clients to defin
 in other words this package is to enable devs to develope trusted, protocol-aware customizable components , that can be used to perform complex computations and validations that would be costly for the EVM and on the other hand not reasonable to do a hardfork for, an example of such computations could be ERC-4337 and Bundlers.
 
 # How Does It Work?
+it's a node that sits between Execution node/layer and application layer of Ethereum.
 ## Overview
 ![workflow](https://github.com/user-attachments/assets/afaf7f66-fdf6-4436-b64f-8b59cd1a2da1)
