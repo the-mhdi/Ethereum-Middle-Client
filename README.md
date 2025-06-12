@@ -33,7 +33,10 @@ it's a node that sits between Execution node/layer and application layer of Ethe
     Endpoint() -> port and network interfaces / if not set -> do default 
     Contract() -> smartcontract associated with this Extention -> default nul 
     SecurityModel() -> stake/slash + Verifiability of Work
+    ExtensionID()
+    PoolID()
 
 * all middle clients ,regardless of their job and logic, participate in a p2p network of middleWare nodes and use the same kademlia table for routing and node discovery, what separates them is ExtentionID and PoolID
-* 
-  
+
+* execution clients must implement a new handshake scheme and maintain a designated distributed hash table keeking track of reputable middle client/node (Extensions), sending periodical VVPs to filter out non-responsive and dishonest nodes, dishonest nodes will be blocked and cant interact with execution nodes no more
+*  
