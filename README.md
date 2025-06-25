@@ -43,3 +43,4 @@ it's a node that sits between Execution node/layer and application layer of Ethe
 
 NOTICE : 
 reducing congestion on base layer in not the direct intent of this design but it can be utilized to act as a L2 rollup 
+Data Availability Proofs are optional. 
