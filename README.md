@@ -44,3 +44,6 @@ it's a node that sits between Execution node/layer and application layer of Ethe
 NOTICE : 
 reducing congestion on base layer in not the direct intent of this design but it can be utilized to act as a L2 rollup 
 Data Availability Proofs are optional. 
+
+
+there'd could be two types of middleware clients 1: those that only act as rpc nodes and route the request to its respective Extension node(middleware node) 2. Extension client: these are nodes that has implemented the Extension interface 
