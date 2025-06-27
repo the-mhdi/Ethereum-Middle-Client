@@ -1,4 +1,4 @@
-### Modular Ethereum Extensions; Offloading specialized, semi-critical logics from the Execution Layer client.
+### Ethereum Middle client Concept, Modular Ethereum With Extensions; Offloading specialized, semi-critical logics from the Execution Layer client.
 
 A standard interface for adding custom logics/extensions to Ethereum nodes with no concensus layer change, no hard fork and no rollup required.
 
@@ -47,3 +47,15 @@ Data Availability Proofs are optional.
 
 
 there'd could be two types of middleware clients 1: those that only act as rpc nodes and route the request to its respective Extension node(middleware node) 2. Extension client: these are nodes that has implemented the Extension interface 
+each extension is like a microservice, each middle node can run as many number of extensions as they want. 
+
+how can we ensure that all extensions of the same ExtensionID run the same logic?
+ The Core Principle: Code Commitment + Proof of Execution
+ social smart contract that 
+
+ there's a registerExtension function 
+step 1 : compile code into a arithmetic circuit(provable format)
+step 2 : ZK Coprocessor
+
+validity attack prevention : 
+
