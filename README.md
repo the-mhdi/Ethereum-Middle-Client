@@ -12,13 +12,27 @@ I define Extensions as protocol-aware customizable components , that can be used
 # How Does It Work?
 in a ZKP manner, Middle-Nodes act as verifiers and Extensios are provers, middle nodes maintain a routing tables of their neighbours and their respective Extensions, middle nodes regardless of the extension they have, can maintain their mempool to have all types of  operaions(a special txn). 
 ### Core Concepts : 
- #### * Middle-Client: 
- 
- #### * Extensions: 
+ #### * Middle-Client: new type of Ethereum node that sits between standard Execution clients and end-users
+  * Maintains two mempools:
+     1. Operation Mempool: unprocessed Operations
+     2. PostOp Mempool: processed and validated Operations
+  * Acts as a verifier of Extension outputs
+  * Manages routing tables of peer Middle-Clients and their supported Extensions
+  * Can enforce stake, fee, and reputation policies to prevent spam and maintain trust
+  * Optionally participates in staking and slashing mechanisms to secure Operations economically
+    
+ #### * Extensions: a protocol-aware, customizable module that performs specialized computation/validation outside the EVM
+  * Each Extension has a unique ExtensionID
+  * Operates as a prover that processes Operations and generates validity proofs or post-processed outputs
+  * Can be independently developed and deployed by any party
+  * May require Middle-Clients to stake collateral, enabling slashing if the Extension produces invalid results
+  * Makes Ethereum more modular, allowing new transaction types and processing logic without modifying consensus
+  * Examples of Extension functionality: ERC-4337 bundler logic , Specialized compliance checks , Advanced signature schemes , ZKP circuit execution
 
 
+
  
-we introduce a two new (semi)transaction types. in regard to ERC-4337 we're calling them Operaions. 
+we introduce two new (semi)transaction types. in regard to ERC-4337 we're calling them Operaions. 
  ### Operation Struct:
     type Operation struct {
       ExtensionID	string
@@ -48,7 +62,7 @@ so as shown on the diagram below the middle nodes manage and maintain to public 
 
 
 
-### challenges : 
+ # CHALLENGES
 
 ## Canonicality and Re-org Safety :
 Before creating an Operation, the user's wallet queries an Execution node to get the hash of a recent, finalized block, it then gets included into the Operation.
@@ -201,22 +215,6 @@ Nodes SHOULD rate limit verification requests per peer.
   ### P2P stack: 
   we will utilize the ethereum execution client p2p stack, devp2p and Kademlia tables to manage our decentralized network of middle nodes.
   RLPx, DiscV5 and ENR are completely utilized.
-
- Ethereum middle(module) node record (EMNR) -> a new scheme and name record for modules to identify each other in the network. it's the same thing as ENR just with EMNR: prefix
-  ### 
-
-## Implementation: 
-
-## Middle node Specs : 
-  
-
-## Extension Specs :
-  Extensions could be written in any language they have to follow these roles:
-  1. Generate zk-proofs on demand
-  2. utilizing json-rpc API to interact with middle nodes and JWT authentication mechanism
-  3. 
-
-
 
 
 NOTICE : 
