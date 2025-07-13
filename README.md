@@ -12,14 +12,26 @@ I define Extensions as protocol-aware customizable components , that can be used
 # How Does It Work?
 in a ZKP manner, Middle-Nodes act as verifiers and Extensios are provers, middle nodes maintain a routing tables of their neighbours and their respective Extensions, middle nodes regardless of the extension they have, can maintain their mempool to have all types of  operaions(a special txn). 
 
-we introduce a new type of transaction. in regard to ERC-4337 we call them Operaions. 
+we introduce a two new transaction types. in regard to ERC-4337 we call them Operaions. 
  ### Operation Struct:
     type Operation struct {
-     ExtensionID	string
-     To       Address
-     Data []byte
-     Sig	 []byte
+      ExtensionID	string
+      To       Address
+      Gas      uint
+      Data     []byte
+      Sig	     []byte
+      BlockHash  []byte // block hash upon op submission to extension
     }
+ ### PostOperation Struct:
+    type PostOp struct {
+     OperationHash  string        // hash(Operation)
+     ExtensionID   string
+     Proof              Proof 
+     Data               []byte
+ 
+     ProcessedBlockHash []byte //block hash at the time of processing
+    }
+
 Middle RPC Nodes receive operations from users, they perform simple verifcation and reputaions management then the Operation would be submitted to the public mempool, middle nodes that have respective Extension to proccess that operation will pick it up, the operation would be processed and the post-prossessed operation will be sumbitted to another mempool called post-mempool.
 
 
@@ -30,8 +42,35 @@ so as shown on the diagram below the middle nodes manage and maintain to public 
 
 
 
+### challenges : 
+
+### Canonicality and Re-org Safety :
+Before creating an Operation, the user's wallet queries an Execution node to get the hash of a recent, finalized block, it then gets included into the Operation.
+After the Extension finishes its computation, it fetches the current block hash from the mainnet and includes it in the PostOp.
+When a Middle Node receives and verifies the PostOp, it MUST performs a critical freshness check:
+
+ 1. It compares the ProcessedBlockHash against its own view of the blockchain.
+
+ 2. It enforces a rule: (RULE No. 1) the PostOp is only valid if its ProcessedBlockHash is very recent (for example, within the last 5-10 blocks).
 
 
+If a re-org happens and the referenced block is orphaned (no longer part of the canonical chain), the Operation becomes instantly invalid. Middle Nodes can simply discard it because the previos state no longer exists. This prevents Extensions from processing operations based on a stale or reverted chain state.
+
+the ProcessedBlockHash and RULE 1 also provide a defense against replay attacks, a malicious actor cannot take a valid PostOp from a week ago and submit it today, because the old ProcessedBlockHash would cause it to be immediately rejected as stale. 
+
+* middle nodes CAN define a PROCESS_WINDOW variable, it's an interval of slots in which an Operation is deemded valid.
+  
+
+### Incentive Mechanisms (TBD) :
+middle nodes run Extenstions, since the Extensions work as provers in this architecture, they need to be paid fairly.
+
+users also want their Operations processed for a predictable fee.
+ 
+the gas fee can be paid by the user directly or be sponsered by another entity, all we need is an ERC4337 incentive flow and users commitment to a fee, this brings up a need for a singleton entrypoint-like contract.
+
+### Proof Formats and Trust Minimization : 
+
+ 
 ## Verifiability of Extensions Work:
    Validity Proofs and validity proof packets(VPP) :
    
