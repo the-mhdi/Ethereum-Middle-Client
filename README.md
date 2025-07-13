@@ -11,8 +11,14 @@ I define Extensions as protocol-aware customizable components , that can be used
 
 # How Does It Work?
 in a ZKP manner, Middle-Nodes act as verifiers and Extensios are provers, middle nodes maintain a routing tables of their neighbours and their respective Extensions, middle nodes regardless of the extension they have, can maintain their mempool to have all types of  operaions(a special txn). 
+### Core Concepts : 
+ #### * Middle-Client: 
+ 
+ #### * Extensions: 
 
-we introduce a two new transaction types. in regard to ERC-4337 we call them Operaions. 
+
+ 
+we introduce a two new (semi)transaction types. in regard to ERC-4337 we're calling them Operaions. 
  ### Operation Struct:
     type Operation struct {
       ExtensionID	string
@@ -44,7 +50,7 @@ so as shown on the diagram below the middle nodes manage and maintain to public 
 
 ### challenges : 
 
-### Canonicality and Re-org Safety :
+## Canonicality and Re-org Safety :
 Before creating an Operation, the user's wallet queries an Execution node to get the hash of a recent, finalized block, it then gets included into the Operation.
 After the Extension finishes its computation, it fetches the current block hash from the mainnet and includes it in the PostOp.
 When a Middle Node receives and verifies the PostOp, it MUST performs a critical freshness check:
@@ -61,20 +67,135 @@ the ProcessedBlockHash and RULE 1 also provide a defense against replay attacks,
 * middle nodes CAN define a PROCESS_WINDOW variable, it's an interval of slots in which an Operation is deemded valid.
   
 
-### Incentive Mechanisms (TBD) :
+## Incentive Mechanisms (TBD) :
 middle nodes run Extenstions, since the Extensions work as provers in this architecture, they need to be paid fairly.
 
 users also want their Operations processed for a predictable fee.
  
 the gas fee can be paid by the user directly or be sponsered by another entity, all we need is an ERC4337 incentive flow and users commitment to a fee, this brings up a need for a singleton entrypoint-like contract.
 
-### Proof Formats and Trust Minimization : 
+## Proof Formats and Trust Minimization : 
+ the proof system must:
 
+* Allow Extensions (Provers) to prove correct processing of an Operation.
+
+* Enable Middle Nodes (Verifiers) to validate proofs deterministically.
+
+* Avoid reliance on central trust.
+
+* Be general enough to handle: ZK proofs (snarks/starks) and other cryptographic attestations (Merkle proofs, signatures).
+
+* Allow efficient verification without heavy resource demands.
+
+* Allow Middle nodes to send validity proof packets to other nodes and receives proof responses. (this is to maintain a vaild reputation system and prevent middle nodes from altering an extension functionality)
+
+   #### standard Proof object: 
+      type Proof struct {
+      ProofType     string            // e.g., "ZK-SNARK", "Signature", "MerkleProof"
+      ExtensionID   string            // Which Extension produced this
+      Inputs        map[string][]byte // Public inputs
+      Output        []byte            // Post-processed result data (e.g., calldata)
+      ProofData     []byte            // The proof itself (binary blob)
+      Metadata      map[string]string // Optional metadata (versioning, etc.)
+      }
+    
+
+
+* Verifiability of Extensions Work: (nodes cross-verifying one another’s proofs)
+
+   a peer challenge-response protocol (distributed attestation) 
+
+  ### validity proof packets :
+
+ We’ll define two main packet types:
  
-## Verifiability of Extensions Work:
-   Validity Proofs and validity proof packets(VPP) :
-   
-## security model
+   #### ProofVerificationRequest
+  
+      type ProofVerificationRequest struct {
+        RequestID     string        // Unique ID for deduplication
+        SenderNodeID  string        // Node issuing the request
+        OperationID   string        // Hash of the original Operation
+        PostOp        PostOp        // Full PostOp struct incl. Proof
+        Timestamp     int64         // Unix timestamp
+        Metadata      map[string]string // Optional context
+      }
+
+   #### ProofVerificationResponse
+      type ProofVerificationResponse struct {
+      RequestID     string        // Echoed from the request
+      ResponderNodeID string      // Who verified
+      Verdict       VerificationVerdict // Enum: VALID / INVALID / ERROR
+      Signature     []byte        // Signature over {RequestID, Verdict}
+      Diagnostics   map[string]string // Optional error details
+      Timestamp     int64
+      }
+
+
+### Proof System Flow:
+
+1. Middle Node (A) produces a PostOp with attached Proof.
+
+2. Before submitting on-chain, (A) broadcasts a ProofVerificationRequest to neighbors.
+
+3. Neighboring nodes (Middle Nodes B, C, D) with the relevant Extensions re-verify the Proof.
+
+4. Each neighbor returns a ProofVerificationResponse
+
+* This creates a decentralized consensus over proof validity.
+* This is the basis of middle nodes reputation system.
+
+Nodes SHOULD rate limit verification requests per peer.
+
+
+(work in process) : 1. Define gossip strategies for distributing verification requests 2. build reputation scoring algorithms.
+
+## Reputation System :
+ reputation needs to be managed in two main scopes: 1. Extension Reputation 2. Middle-Node Reputation
+ 
+ | Metric                    | Applies To             | Description                                                        |
+| ------------------------- | ---------------------- | ------------------------------------------------------------------ |
+| ValidProofCount           | Middle Node, Extension | How many proofs this node/extension generated or verified as valid |
+| InvalidProofCount         | Middle Node, Extension | How many invalid proofs this node/extension generated or verified  |
+| OperationAcceptanceRate   | Middle Node            | % of Operations accepted vs rejected                               |
+| OperationExecutionLatency | Middle Node, Extension | Time taken to process an Operation into PostOp                     |
+| ProofVerificationLatency  | Middle Node            | Time to respond to proof verification requests                     |
+| AvailabilityScore         | Middle Node            | % uptime responding to requests                                    |
+| DisputeOutcomeScore       | Middle Node, Extension | % of times a node was challenged and proved correct vs incorrect   |
+| StakeBalance              | Middle Node, Extension  |                                                                   |
+| Peer Endorsements         | Middle Node, Extension | Positive attestations signed by reputable peers                    |
+| Negative Slashes          | Middle Node, Extension | Slashing events due to malicious or faulty behavior                |
+| Recent Activity Timestamp | Middle Node, Extension | Last time this node/extension was seen active                      |
+
+
+### Data Models : 
+#### Extension Reputation
+    type ExtensionReputation struct {
+    ExtensionID            string
+    ValidProofCount        uint64
+    InvalidProofCount      uint64
+    DisputeOutcomeScore    float64
+    AvgExecutionLatencyMs  float64
+    LastActiveTimestamp    int64
+    StakeBalance           uint64   // New: How much stake this Extension has
+    UnstakeDelaySeconds    uint64   // New: Cooldown period
+    }
+#### Middle-Node Reputation
+    type MiddleNodeReputation struct {
+    NodeID                      string
+    ValidProofsProduced         uint64
+    InvalidProofsProduced       uint64
+    OperationAcceptanceRate     float64
+    AvgProofVerificationLatency float64
+    AvailabilityScore           float64
+    StakeBalance                uint64
+    ExtensionStakes             []ExtensionReputation
+    Endorsements                []string
+    NegativeSlashes             uint64
+    LastActiveTimestamp         int64
+    }
+### ReputationScore formula + Design on-chain dispute resolution -> TBD 
+
+
 
 ## Specifications: 
   ### P2P stack: 
