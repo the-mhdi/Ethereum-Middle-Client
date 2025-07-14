@@ -1,6 +1,6 @@
 ### Ethereum Middle client Concept, Modular Ethereum With Extensions; Offloading specialized, semi-critical logics from the Execution Layer client.
 
-A standard interface for adding custom logics/extensions to Ethereum nodes with no concensus layer change, no hard fork!
+A standard interface for adding custom logics/extensions to Ethereum nodes with no concensus layer change, no hard fork, no L2!
 
 
 it's a protocol-adjacent layer introducing a new type of ethereum clients with a new set of API endponts along side a custom transaction type with a unified p2p sub-pool that interacts directly with ethereum main public mempool each node on this network of new clients can have itsown set of Extensions.
@@ -78,7 +78,7 @@ If a re-org happens and the referenced block is orphaned (no longer part of the 
 
 the ProcessedBlockHash and RULE 1 also provide a defense against replay attacks, a malicious actor cannot take a valid PostOp from a week ago and submit it today, because the old ProcessedBlockHash would cause it to be immediately rejected as stale. 
 
-* middle nodes CAN define a PROCESS_WINDOW variable, it's an interval of slots in which an Operation is deemded valid.
+* middle nodes CAN define a configurable PROCESS_WINDOW variable, it's an interval of slots in which an Operation is deemded valid.
   
 
 ## Incentive Mechanisms (TBD) :
@@ -144,6 +144,8 @@ the gas fee can be paid by the user directly or be sponsered by another entity, 
       Timestamp     int64
       }
 
+   #### ProofVerificationReceipt (no sure if this one is needed)
+
 
 ### Proof System Flow:
 
@@ -181,18 +183,28 @@ two parties involved : Extension dev and Registry Smart Contract
 1. Developer Prepares the Extension, the extension should be compilable to an arithmetic circuit (R1CS/QAP)
 2. serializeed the constraint system to a canonical blob.
       * what do i mean by canonical blob ?
-        
+        A byte-serialized representation of a build artifact that every Middle Node can hash to the same value.
+        we MIGHT define a VerifierBinary struct in our design :
+
+            type VerifierBinary struct {
+            BinaryFormat string // e.g., "wasm", "solidity", "elf"
+            BinaryData []byte
+            BinaryHash []byte
+             }
+
+
+
 3. Trusted Setup (if needed): run trusted setup to generate proving/verifying keys.
 
 4. Hashing
 
        circuitHash = keccak256(r1cs_blob)
-
        verifyingKeyHash = keccak256(serialized_verifying_key)
-5. Verifier Metadata curve info, SNARK flavor ..
-6. ExtensionID: it should be a unique string 
+   
+6. Verifier Metadata curve info, SNARK flavor ..
+7. ExtensionID: it should be a unique string 
 
-7. calling the registerExtension function of Registry Contract
+8. calling the registerExtension function of Registry Contract
    
        function registerExtension(
        string calldata extensionId,
@@ -201,9 +213,11 @@ two parties involved : Extension dev and Registry Smart Contract
        string calldata proofType,
        bytes calldata verifierMetadata
        ) external;
+   
 Registry Contract MUST store a mapping of ExtensionID to ExtensionMetadata 
                
       mapping(string => ExtensionMetadata)
+      
 Extension Metadata struct COULD be : 
 
        ExtensionMetadata {
@@ -285,28 +299,20 @@ Any node or user can query the registry on-chain to get the canonical circuit co
 ### ReputationScore formula + Design on-chain dispute resolution -> TBD 
 
 
+## Extension Registry Smart Contract :
+
 
 ## Specifications: 
   ### P2P stack: 
   we will utilize the ethereum execution client p2p stack, devp2p and Kademlia tables to manage our decentralized network of middle nodes.
   RLPx, DiscV5 and ENR are completely utilized.
+   node MUST broadcast a Capability Advertisement Packet upon peer connection so they can advertise SupportedExtensions, SupportedProofTypes , MaxProofSize , FeeSchedule
 
 
 NOTICE : 
-reducing congestion on base layer in not the direct intent of this design but it can be utilized to act as a L2 rollup 
+reducing txn congestion on base layer in not the direct intent of this design but it can be utilized to also act as an L2 rollup 
+
 Data Availability Proofs are optional. 
 
 
-there'd could be two types of middleware clients 1: those that only act as rpc nodes and route the request to its respective Extension node(middleware node) 2. Extension client: these are nodes that has implemented the Extension interface 
-each extension is like a microservice, each middle node can run as many number of extensions as they want. 
-
-how can we ensure that all extensions of the same ExtensionID run the same logic?
- The Core Principle: Code Commitment + Proof of Execution
- social smart contract that 
-
- there's a registerExtension function 
-step 1 : compile code into a arithmetic circuit(provable format)
-step 2 : ZK Coprocessor
-
-validity attack prevention : 
 
