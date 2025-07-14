@@ -6,7 +6,7 @@ A standard interface for adding custom logics/extensions to Ethereum nodes with 
 it's a protocol-adjacent layer introducing a new type of ethereum clients with a new set of API endponts along side a custom transaction type with a unified p2p sub-pool that interacts directly with ethereum main public mempool each node on this network of new clients can have itsown set of Extensions.
 I define Extensions as protocol-aware customizable components , that can be used to perform complex computations and validations that would be costly for the EVM and on the other hand not reasonable to do a hardfork for, an example of such computations could be ERC-4337 Bundlers.
 
-![Untitled Diagram drawio (1)](https://github.com/user-attachments/assets/a76e0ebf-96c4-487f-95b5-303b1ce4fe00)
+![Untitled Diagram drawio (1)](https://github.com/user-attachments/assets/a76e0ebf-96c4-487f-95b5-303b1ce4fe00) Fig. 1
 
 
 # How Does It Work?
@@ -105,12 +105,12 @@ the gas fee can be paid by the user directly or be sponsered by another entity, 
 
    #### standard Proof object: 
       type Proof struct {
-      ProofType     string            // e.g., "ZK-SNARK", "Signature", "MerkleProof"
-      ExtensionID   string            // Which Extension produced this
+      ProofType     string            // e.g., "Groth16"
+      ExtensionID   string            // erc4337
       Inputs        map[string][]byte // Public inputs
       Output        []byte            // Post-processed result data (e.g., calldata)
       ProofData     []byte            // The proof itself (binary blob)
-      Metadata      map[string]string // Optional metadata (versioning, etc.)
+      Metadata      map[string]string // Optional metadata (versioning, etc.) MUST include "CircuitHash"
       }
     
 
@@ -160,7 +160,68 @@ the gas fee can be paid by the user directly or be sponsered by another entity, 
 
 Nodes SHOULD rate limit verification requests per peer.
 
+  ### Validity Attack protection : 
+   how can we guarantee that: 1. The Extension logic is exactly the same logic other nodes expect for that ExtensionID? 2. The output and proof are produced by an approved implementation, not a malicious or buggy variant?
 
+   we'll be using ZK Circuit Commitment committing each ExtensionID to:
+* One specific ZK circuit definition 
+* One verifying key 
+
+This ensures all proofs are generated only with that circuit. Every Middle Node can deterministically verify them and that there is no ambiguity about what code was executed.
+ ##### these would be a registry contract and a registry mapping like below : 
+    ExtensionID → {CircuitHash, VerifyingKeyHash, ProofType, VerifierMetadata}
+
+Middle nodes MUST only accept Operations referencing a known ExtensionID
+Middle nodes MUST Only accept proofs that declare the circuitHash and are verified against the verifying key hash
+Middle Nodes MUST check : proof.Metadata["CircuitHash"] == registry[proof.ExtensionID].circuitHash (before verifying)
+
+Extension Registry Flow : 
+two parties involved : Extension dev and Registry Smart Contract
+
+1. Developer Prepares the Extension, the extension should be compilable to an arithmetic circuit (R1CS/QAP)
+2. serializeed the constraint system to a canonical blob.
+      * canonical blob
+        
+3. Trusted Setup (if needed): run trusted setup to generate proving/verifying keys.
+
+4. Hashing
+
+       circuitHash = keccak256(r1cs_blob)
+
+       verifyingKeyHash = keccak256(serialized_verifying_key)
+5. Verifier Metadata curve info, SNARK flavor ..
+6. ExtensionID: it should be a unique string 
+
+7. calling the registerExtension function of Registry Contract
+   
+       function registerExtension(
+       string calldata extensionId,
+       bytes32 circuitHash,
+       bytes32 verifyingKeyHash,
+       string calldata proofType,
+       bytes calldata verifierMetadata
+       ) external;
+Registry Contract MUST store a mapping of ExtensionID to ExtensionMetadata 
+               
+      mapping(string => ExtensionMetadata)
+Extension Metadata struct COULD be : 
+
+       ExtensionMetadata {
+       bytes32 circuitHash;
+       bytes32 verifyingKeyHash;
+       string proofType;
+       bytes verifierMetadata;
+     }
+
+******* After this point *********
+Any node or user can query the registry on-chain to get the canonical circuit commitment and verifying key commitment for any ExtensionID.
+
+### Middle Node Adding an Extension (Middle Node Onboarding)
+  Imagine you are operating a Middle Node and want to add a new Extension to your already working set of Extensions (Fig. 1)
+ 1. query the on-chain registry -> GET ExtensionMetadata(extensionID)
+ 2. ...
+
+  
 (work in process) : 1. Define gossip strategies for distributing verification requests 2. build reputation scoring algorithms.
 
 ## Reputation System :
