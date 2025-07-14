@@ -175,12 +175,12 @@ Middle nodes MUST only accept Operations referencing a known ExtensionID
 Middle nodes MUST Only accept proofs that declare the circuitHash and are verified against the verifying key hash
 Middle Nodes MUST check : proof.Metadata["CircuitHash"] == registry[proof.ExtensionID].circuitHash (before verifying)
 
-Extension Registry Flow : 
+#### Extension Registry Flow : 
 two parties involved : Extension dev and Registry Smart Contract
 
 1. Developer Prepares the Extension, the extension should be compilable to an arithmetic circuit (R1CS/QAP)
 2. serializeed the constraint system to a canonical blob.
-      * canonical blob
+      * what do i mean by canonical blob ?
         
 3. Trusted Setup (if needed): run trusted setup to generate proving/verifying keys.
 
@@ -214,13 +214,27 @@ Extension Metadata struct COULD be :
      }
 
 ******* After this point *********
+
 Any node or user can query the registry on-chain to get the canonical circuit commitment and verifying key commitment for any ExtensionID.
 
 ### Middle Node Adding an Extension (Middle Node Onboarding)
   Imagine you are operating a Middle Node and want to add a new Extension to your already working set of Extensions (Fig. 1)
  1. query the on-chain registry -> GET ExtensionMetadata(extensionID)
- 2. ...
+ 2. obtain verifier Code (could be a smart contract address) & Verifying Key
+ 3. Store Extension Locally
+ 
+        json {
+        "ExtensionID": "erc4337-bundler-v1",
+         "CircuitHash": "0xabc123...",
+         "VerifyingKeyHash": "0xdef456...",
+         "ProofType": "Groth16",
+        "VerifierMetadata": {...},
+        "VerifierPath": "/extensions/erc4337-bundler-v1/verifier", or address : "0x...."
+        "VerifyingKeyPath": "/extensions/erc4337-bundler-v1/vk"
+        }
 
+#### Runtime Verification Flow : what happens when your middle node receives a PostOP 
+(TBD)
   
 (work in process) : 1. Define gossip strategies for distributing verification requests 2. build reputation scoring algorithms.
 
