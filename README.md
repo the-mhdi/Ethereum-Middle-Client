@@ -301,6 +301,8 @@ Any node or user can query the registry on-chain to get the canonical circuit co
 
 ## Extension Registry Smart Contract :
 
+## Final Bridge to L1; Consensus over Submission
+ 
 
 ## Specifications: 
   ### P2P stack: 
