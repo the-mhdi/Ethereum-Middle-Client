@@ -302,8 +302,14 @@ Any node or user can query the registry on-chain to get the canonical circuit co
 ## Extension Registry Smart Contract :
 
 ## Final Bridge to L1; Consensus over Submission
- 
-
+  who gets to submit the final tx to the mainnet mempool?
+  in each slot(12s) there would be only one submitter and only that one is eligible for compensation,
+  there would be a singleton Consensus Contract this contract :
+     * keeps track of submitter in each slot
+     * keeps track of middle nodes and their rewards
+     * 
+   
+  
 ## Specifications: 
   ### P2P stack: 
   we will utilize the ethereum execution client p2p stack, devp2p and Kademlia tables to manage our decentralized network of middle nodes.
