@@ -270,7 +270,7 @@ Any node or user can query the registry on-chain to get the canonical circuit co
 | Recent Activity Timestamp | Middle Node, Extension | Last time this node/extension was seen active                      |
 
 
-### Data Models : 
+### Data Models  
 #### Extension Reputation
     type ExtensionReputation struct {
     ExtensionID            string
@@ -282,6 +282,7 @@ Any node or user can query the registry on-chain to get the canonical circuit co
     StakeBalance           uint64   // New: How much stake this Extension has
     UnstakeDelaySeconds    uint64   // New: Cooldown period
     }
+    
 #### Middle-Node Reputation
     type MiddleNodeReputation struct {
     NodeID                      string
@@ -305,9 +306,11 @@ Any node or user can query the registry on-chain to get the canonical circuit co
   who gets to submit the final tx to the mainnet mempool?
   in each slot(12s) there would be only one submitter and only that one is eligible for compensation,
   there would be a singleton Consensus Contract this contract :
-     * keeps track of submitter in each slot
-     * keeps track of middle nodes and their rewards
-     * 
+* keeps track of submitter in each slot -> When a transaction is submitted, the contract runs the deterministic leader election algorithm (e.g., the XOR check) on-chain. It verifies that the transaction sender (msg.sender) is the one and only legitimate leader for the current slot. If not, the transaction fails.
+* Fee and Reward Distribution
+* stake/slash management
+* Proof Validation
+     
    
   
 ## Specifications: 
