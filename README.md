@@ -82,11 +82,11 @@ the ProcessedBlockHash and RULE 1 also provide a defense against replay attacks,
   
 
 ## Incentive Mechanisms (TBD) :
-middle nodes run Extenstions, since the Extensions work as provers in this architecture, they need to be paid fairly.
+middle nodes run Extenstions, since the Extensions work as provers in this architecture, middle nodes need to be paid fairly.
 
 users also want their Operations processed for a predictable fee.
  
-the gas fee can be paid by the user directly or be sponsered by another entity, all we need is an ERC4337 incentive flow and users commitment to a fee, this brings up a need for a singleton entrypoint-like contract.
+the gas fee can be paid by the user directly or be sponsered by another entity, all we need is an ERC4337 incentive flow and users commitment to a fee, this brings up a need for a singleton entrypoint-like contract we call it consensus contract 
 
 ## Proof Formats and Trust Minimization : 
  the proof system must:
