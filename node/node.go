@@ -25,11 +25,11 @@ type Node struct {
 
 	// ExtensionPool map[string]*Extension // Registered Extensions (ExtensionID -> Extension)
 
-	Monitor    *Monitor           // constantly monitors the node's state and health.
-	Reputation *ReputationManager // Tracks node + extension reputation + participating in peer challenge-response protocol
+	Monitor    *Monitor                      // constantly monitors the node's state and health.
+	Reputation *reputation.ReputationManager // Tracks node + extension reputation + participating in peer challenge-response protocol
 
 	P2P       *p2p.Server // Handles gossip and discovery
-	endpoints *servers    // Node endpoints for rpc handling
+	endpoints *servers    // Node endpoints for rep requset handling
 
 	db Database
 
