@@ -31,7 +31,7 @@ type Node struct {
 	P2P       *p2p.Server // Handles gossip and discovery
 	endpoints *servers    // Node endpoints for rep requset handling
 
-	db Database
+	db ethdb.Database
 
 	state    int // Tracks state of node lifecycle
 	Shutdown chan struct{}
