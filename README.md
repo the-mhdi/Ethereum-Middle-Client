@@ -306,7 +306,7 @@ Any node or user can query the registry on-chain to get the canonical circuit co
   who gets to submit the final tx to the mainnet mempool?
   in each slot(12s) there would be only one submitter and only that one is eligible for compensation,
   there would be a singleton Consensus Contract this contract :
-* keeps track of submitter in each slot -> When a transaction is submitted, the contract runs the deterministic leader election algorithm (e.g., the XOR check) on-chain. It verifies that the transaction sender (msg.sender) is the one and only legitimate leader for the current slot. If not, the transaction fails.
+* keeps track of submitter in each slot(epoch) -> noodes run a deterministic leader election algorithm (like the XOR check), consensus contract manages the compensation of middle nodes
 * Fee and Reward Distribution
 * stake/slash management
 * Proof Validation
