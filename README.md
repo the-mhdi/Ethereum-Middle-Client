@@ -132,6 +132,7 @@ the gas fee can be paid by the user directly or be sponsered by another entity, 
         PostOp        PostOp        // Full PostOp struct incl. Proof
         Timestamp     int64         // Unix timestamp
         Metadata      map[string]string // Optional context
+        RequestHash  []byte
       }
 
    #### ProofVerificationResponse
@@ -144,6 +145,7 @@ the gas fee can be paid by the user directly or be sponsered by another entity, 
       Timestamp     int64
       }
 
+  middle nodes use this information in order to manage Extension Reputation.
    #### ProofVerificationReceipt (no sure if this one is needed)
 
 
