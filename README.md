@@ -46,7 +46,7 @@ we introduce two new (semi)transaction types. in regard to ERC-4337 we're callin
       Gas      uint
       Data     []byte
       Sig	     []byte
-      BlockHash  []byte // block hash upon op submission to extension
+      BlockHash  []byte // block hash upon op submission to pool
     }
  ### PostOperation Struct:
     type PostOp struct {
@@ -92,7 +92,7 @@ middle nodes run Extenstions, since the Extensions work as provers in this archi
 
 users also want their Operations processed for a predictable fee.
  
-the gas fee can be paid by the user directly or be sponsered by another entity, all we need is an ERC4337 incentive flow and users commitment to a fee, this brings up a need for a singleton entrypoint-like contract we call it consensus contract 
+the gas fee can be paid by the user directly or be sponsered by another entity, all we need is an ERC4337 incentive flow and users commitment to a fee, this brings up a need for a singleton entrypoint-like contract we call it consensus contract. we'll be utilizing this contract to distribute rewards and gas, stake/slash incentive system etc.
 
 ## Proof Formats and Trust Minimization : 
  the proof system must:
@@ -151,7 +151,7 @@ the gas fee can be paid by the user directly or be sponsered by another entity, 
       Timestamp     int64
       }
 
-  middle nodes use this information in order to manage Extension Reputation.
+  middle nodes use this information in order to manage the Reputation System.
    #### ProofVerificationReceipt (no sure if this one is needed)
 
 
@@ -191,7 +191,7 @@ two parties involved : Extension dev and Registry Smart Contract
 1. Developer Prepares the Extension, the extension should be compilable to an arithmetic circuit (R1CS/QAP)
 2. serializeed the constraint system to a canonical blob.
       * what do i mean by canonical blob ?
-        A byte-serialized representation of a build artifact that every Middle Node can hash to the same value.
+        A byte-serialized representation of a build artifact that every Middle Node can hash to the same value. we use WASM
         we MIGHT define a VerifierBinary struct in our design :
 
             type VerifierBinary struct {
@@ -220,8 +220,7 @@ two parties involved : Extension dev and Registry Smart Contract
        bytes32 verifyingKeyHash,
        string calldata proofType,
        bytes calldata verifierMetadata,
-       bytes extensionCode, //content of .wasm file
-       bytes extensionCodeHash
+       bytes extensionBinaryData, //content of .wasm file
        ) external;
    
 Registry Contract MUST store a mapping of ExtensionID to ExtensionMetadata 
@@ -235,8 +234,7 @@ Extension Metadata struct COULD be :
        bytes32 verifyingKeyHash;
        string proofType;
        bytes verifierMetadata;
-       bytes extensionCode; //content of .wasm file
-       bytes extensionCodeHash;
+       bytes extensionBinaryData; //content of .wasm file
 
      }
 
@@ -289,56 +287,74 @@ Any node or user can query the registry on-chain to get the canonical circuit co
 
 
 
-#### Runtime Verification Flow : what happens when your middle node receives a PostOP 
+#### Runtime Verification Flow : what happens when your middle node receives a PostOP
+ 1. verify the proof by running ZKP verification algorithm
+ 2. if verified : sumbit to the PostOp pool
+ 3. re-run the Operation if : you recieved 2 or more PostOps of the same Operation to check the state trace.
 (TBD)
 
   
 (work in process) : 1. Define gossip strategies for distributing verification requests 2. build reputation scoring algorithms.
 
 ## Reputation System :
- reputation needs to be managed in two main scopes: 1. Extension Reputation 2. Middle-Node Reputation
- 
- | Metric                    | Applies To             | Description                                                        |
-| ------------------------- | ---------------------- | ------------------------------------------------------------------ |
-| ValidProofCount           | Middle Node, Extension | How many proofs this node/extension generated or verified as valid |
-| InvalidProofCount         | Middle Node, Extension | How many invalid proofs this node/extension generated or verified  |
-| OperationAcceptanceRate   | Middle Node            | % of Operations accepted vs rejected                               |
-| OperationExecutionLatency | Middle Node, Extension | Time taken to process an Operation into PostOp                     |
-| ProofVerificationLatency  | Middle Node            | Time to respond to proof verification requests                     |
-| AvailabilityScore         | Middle Node            | % uptime responding to requests                                    |
-| DisputeOutcomeScore       | Middle Node, Extension | % of times a node was challenged and proved correct vs incorrect   |
-| StakeBalance              | Middle Node, Extension  |                                                                   |
-| Peer Endorsements         | Middle Node, Extension | Positive attestations signed by reputable peers                    |
-| Negative Slashes          | Middle Node, Extension | Slashing events due to malicious or faulty behavior                |
-| Recent Activity Timestamp | Middle Node, Extension | Last time this node/extension was seen active                      |
-
+ reputation needs to be locally managed in two main scopes: 1. Extension Reputation 2. Middle-Node(peer) Reputation
 
 ### Data Models  
 #### Extension Reputation
     type ExtensionReputation struct {
-    ExtensionID            string
-    ValidProofCount        uint64
-    InvalidProofCount      uint64
-    DisputeOutcomeScore    float64
-    AvgExecutionLatencyMs  float64
-    LastActiveTimestamp    int64
-    StakeBalance           uint64   // New: How much stake this Extension has
-    UnstakeDelaySeconds    uint64   // New: Cooldown period
+    //ValidProofRate
+	// ValidProofCount / (ValidProofCount+InvalidProofCount) MUST BE > 0.8, too sensitive to initial failures, two defaults: prior_valid_proofs and prior_invalid_proofs
+	// Score = (ValidProofCount + prior_valid_proofs) / (ValidProofCount + InvalidProofCount + prior_valid_proofs + prior_invalid_proofs)
+
+	ValidProofCount   int // Number of valid proofs submitted
+	InvalidProofCount int // Number of invalid proofs submitted
+
+	// OperationAcceptanceRate
+	//if OperationAcceptanceRate < 0.6, then the extension is considered unreliable and socket connection is closed
+	OperationAcceptanceCount int // Number of Operations accepted by the extension
+	OperationRejectionCount  int // Number of Operations rejected by the extension
+
+	// latency is relative to the specific ExtensionID node decides this on local registration,
+	// if latency > OperationExecutionLatency, then the extension is considered unreliable and therefore throttled.
+	OperationExecutionLatency int // Time taken to process an Operation into PostOp
+
+	Staked          bool
+	StakeBalance    uint64 // Amount of stake held by the node or extension
+	NegativeSlashes int    // Number of times the node or extension was penalized for malicious behavior
+
+	LastActiveTimestamp time.Time // Last time the node or extension was active
+
+	Blacklisted      bool
+	BlacklistedUntil time.Time // If blacklisted, the time until which it is blacklisted
+
     }
     
 #### Middle-Node Reputation
     type MiddleNodeReputation struct {
-    NodeID                      string
-    ValidProofsProduced         uint64
-    InvalidProofsProduced       uint64
-    OperationAcceptanceRate     float64
-    AvgProofVerificationLatency float64
-    AvailabilityScore           float64
-    StakeBalance                uint64
-    ExtensionStakes             []ExtensionReputation
-    Endorsements                []string
-    NegativeSlashes             uint64
-    LastActiveTimestamp         int64
+ 	ValidProofCount   int // Number of valid proofs submitted to p2p mempool my the peer
+	InvalidProofCount int // Number of invalid proofs submitted to p2p mempool my the peer
+
+	// OperationAcceptanceRate
+	//if OperationAcceptanceRate < 0.6, then the peer is considered unreliable and socket connection is closed
+	OperationAcceptanceCount int // Number of Operations accepted by the peer
+	OperationRejectionCount  int // Number of Operations rejected by the peer
+
+	ProofVerificationLatency time.Duration // Time taken to verify a proof //middle node only
+	AvailabilityScore        float64       // % uptime responding to requests // middle node only // > 0.8 okay, < 0.8 throttled, < 0.5 banned
+
+	// DisputeOutcomeScore > 0.8 okay // DisputeOutcomeScore < 0.8 throttled , // DisputeOutcomeScore < 0.5 banned
+	DisputeOutcomeScore float64 // % of times a node was challenged and proved correct vs incorrect
+
+	staked          bool
+	StakeBalance    uint64 // Amount of stake held by the node or extension
+	NegativeSlashes int    // Number of times the node or extension was penalized for malicious behavior
+
+	PeerEndorsements []string // List of peer endorsements or challenges
+
+	LastActiveTimestamp time.Time // Last time the node or extension was active
+
+	Blacklisted      bool
+	BlacklistedUntil time.Time // If blacklisted, the time until which it is blacklisted
     }
 ### ReputationScore formula + Design on-chain dispute resolution -> TBD 
 
