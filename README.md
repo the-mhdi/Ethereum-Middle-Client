@@ -220,7 +220,6 @@ two parties involved : Extension dev and Registry Smart Contract
        bytes32 verifyingKeyHash,
        string calldata proofType,
        bytes calldata verifierMetadata,
-       bytes extensionBinaryData, //content of .wasm file
        ) external;
    
 Registry Contract MUST store a mapping of ExtensionID to ExtensionMetadata 
@@ -234,7 +233,6 @@ Extension Metadata struct COULD be :
        bytes32 verifyingKeyHash;
        string proofType;
        bytes verifierMetadata;
-       bytes extensionBinaryData; //content of .wasm file
 
      }
 
