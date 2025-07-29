@@ -28,7 +28,13 @@ in a ZKP manner, Middle-Nodes act as verifiers and Extensios are provers, middle
   * May require Middle-Clients to stake collateral, enabling slashing if the Extension produces invalid results
   * Makes Ethereum more modular, allowing new transaction types and processing logic without modifying consensus
   * Examples of Extension functionality: ERC-4337 bundler logic , Specialized compliance checks , Advanced signature schemes , ZKP circuit execution
-
+  * could be written in any programming language as long as they're compilable and interpretable by WebAssembly Runtime
+  * Extensions execute in private as opposed to EVM smart contract where execute everything in public.
+  * Extensions do not change the blockchain state directly like smart contracts do, though they can call contracts and indirectly be responsible for a state change.
+  * Extensions MUST return a proof with every call.
+  * we require each node to generate a zero-knowledge proof (ZKP) that it correctly executed the Extension.
+  * (not sure) each Extension has a Network-Wide state, maintained by middle nodes.
+  
 
 
  
@@ -213,7 +219,9 @@ two parties involved : Extension dev and Registry Smart Contract
        bytes32 circuitHash,
        bytes32 verifyingKeyHash,
        string calldata proofType,
-       bytes calldata verifierMetadata
+       bytes calldata verifierMetadata,
+       bytes extensionCode, //content of .wasm file
+       bytes extensionCodeHash
        ) external;
    
 Registry Contract MUST store a mapping of ExtensionID to ExtensionMetadata 
@@ -227,6 +235,9 @@ Extension Metadata struct COULD be :
        bytes32 verifyingKeyHash;
        string proofType;
        bytes verifierMetadata;
+       bytes extensionCode; //content of .wasm file
+       bytes extensionCodeHash;
+
      }
 
 ******* After this point *********
@@ -237,7 +248,9 @@ Any node or user can query the registry on-chain to get the canonical circuit co
   Imagine you are operating a Middle Node and want to add a new Extension to your already working set of Extensions (Fig. 1)
  1. query the on-chain registry -> GET ExtensionMetadata(extensionID)
  2. obtain verifier Code (could be a smart contract address) & Verifying Key
- 3. Store Extension Locally
+ 3. acquire the Extension code and compile it to .wasm
+ 4. Store Extension Locally
+ 5. Store Extension Metadata Locally :
  
         json {
         "ExtensionID": "erc4337-bundler-v1",
@@ -245,12 +258,40 @@ Any node or user can query the registry on-chain to get the canonical circuit co
          "VerifyingKeyHash": "0xdef456...",
          "ProofType": "Groth16",
         "VerifierMetadata": {...},
-        "VerifierPath": "/extensions/erc4337-bundler-v1/verifier", or address : "0x...."
-        "VerifyingKeyPath": "/extensions/erc4337-bundler-v1/vk"
+        "VerifierPath": "/extensions/erc4337-bundler-v1/verifier", or address : "0x....",
+        "VerifyingKeyPath": "/extensions/erc4337-bundler-v1/vk",
+        "Extension Dir": "/extensions/..."
         }
+    
+  6. modify the MiddleNode config file to register your extension, or run the register command (TBD)
+
+### Operation Execution Flow and proof of honest Extension : 
+
+  When a node and one of its extensions need to perform a task, we follows this process:
+
+   1.The node starts with a known initial state (e.g., a hash of the current Operation, Extension Network-Wide state). (State TBD)
+
+   2.Execute Program: middle node runs the WASM Extension and calls some functions, which take the initial state and some inputs, and produces a new state.
+
+   3.Generate Proof: The middle node uses the execution trace as a witness. It feeds the witness and the Proving Key (PK) into a ZKP library (like a SNARK or STARK prover) to generate a compact proof.
+
+   
+   *Extension MUST return a proof with every call 
+   
+   4. local verification of Extension proof
+   
+   5.Network Verification
+   The middle node then broadcasts its claimed new state(PostOp) along with the ZKP to the network.
+   Other nodes act as verifiers. They do not re-run the program. They simply run the highly efficient ZKP verification algorithm using the Verification Key (VK), the initial state, the new state, and the proof.
+   *If the proof is valid, the network accepts the new state as legitimate. 
+   *If a malicious node were to tamper with the Extension code or fake the result, it would be unable to produce a valid proof, and the network would reject its update
+   
+
+
 
 #### Runtime Verification Flow : what happens when your middle node receives a PostOP 
 (TBD)
+
   
 (work in process) : 1. Define gossip strategies for distributing verification requests 2. build reputation scoring algorithms.
 
