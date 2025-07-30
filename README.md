@@ -1,21 +1,25 @@
-### Ethereum Middle client Concept, Modular Ethereum With Extensions; Offloading specialized, semi-critical logics from the Execution Layer client.
+### Ethereum Middle client Concept, Modular Ethereum With Extensions; A Protocol-Adjacent Overlay Network for Verifiable Off-Chain Computation on Ethereum and Offloading specialized, semi-critical logics from the Execution Layer client.
 
 A standard interface for adding custom logics/extensions to Ethereum nodes with no concensus layer change, no hard fork, no L2!
 
 
 it's a protocol-adjacent layer introducing a new type of ethereum clients with a new set of API endponts along side a custom transaction type with a unified p2p sub-pool that interacts directly with ethereum main public mempool each node on this network of new clients can have itsown set of Extensions.
+
 I define Extensions as protocol-aware customizable components , that can be used to perform complex computations and validations that would be costly for the EVM and on the other hand not reasonable to do a hardfork for, an example of such computations could be ERC-4337 Bundlers.
 
 ![Untitled Diagram drawio (1)](https://github.com/user-attachments/assets/a76e0ebf-96c4-487f-95b5-303b1ce4fe00) Fig. 1
 
 
 # How Does It Work?
-in a ZKP manner, Middle-Nodes act as verifiers and Extensios are provers, middle nodes maintain a routing tables of their neighbours and their respective Extensions, middle nodes regardless of the extension they have, can maintain their mempool to have all types of  operaions(a special txn). 
+Middle-Nodes form a *semi-stateless network of ZK-WASM runtime machines, each middle-node can have its own set of desired Extensions, middle nodes maintain a routing table of their neighbours and their respective Extensions, upon receiving a transaction(userOperation) it gets added to a public mempool, a middle node would pick up a transaction, loads the specific WASM binary for the requested ExtensionID then executes the binary inside its zk-WASM runtime, generates the proof and then propagates the post-transaction(Post-operation), a middle node regardless of its extension-set would maintain a public mempool of all types of operaions and extensions. 
+
+
 ### Core Concepts : 
  #### * Middle-Client: new type of Ethereum node that sits between standard Execution clients and end-users
   * Maintains two mempools:
      1. Operation Mempool: unprocessed Operations
      2. PostOp Mempool: processed and validated Operations
+  * Is a ZK-WASM runtime machine
   * Acts as a verifier of Extension outputs
   * Manages routing tables of peer Middle-Clients and their supported Extensions
   * Can enforce stake, fee, and reputation policies to prevent spam and maintain trust
@@ -23,30 +27,29 @@ in a ZKP manner, Middle-Nodes act as verifiers and Extensios are provers, middle
     
  #### * Extensions: a protocol-aware, customizable module that performs specialized computation/validation outside the EVM
   * Each Extension has a unique ExtensionID
-  * Operates as a prover that processes Operations and generates validity proofs or post-processed outputs
   * Can be independently developed and deployed by any party
   * May require Middle-Clients to stake collateral, enabling slashing if the Extension produces invalid results
   * Makes Ethereum more modular, allowing new transaction types and processing logic without modifying consensus
-  * Examples of Extension functionality: ERC-4337 bundler logic , Specialized compliance checks , Advanced signature schemes , ZKP circuit execution
+  * Examples of Extension functionality: any type of private or public computation, a ERC-4337 bundler , a whole ethereum L2, 
   * could be written in any programming language as long as they're compilable and interpretable by WebAssembly Runtime
-  * Extensions execute in private as opposed to EVM smart contract where execute everything in public.
+  * Extensions execute in private as opposed to EVM smart contract where everything executes in public.
   * Extensions do not change the blockchain state directly like smart contracts do, though they can call contracts and indirectly be responsible for a state change.
-  * Extensions MUST return a proof with every call.
-  * we require each node to generate a zero-knowledge proof (ZKP) that it correctly executed the Extension.
-  * (not sure) each Extension has a Network-Wide state, maintained by middle nodes.
+  * we require each middle-node to generate a zero-knowledge proof (ZKP) that it correctly executed the Extension.
+  * All Extensions MUST be fully deterministic
   
 
 
  
-we introduce two new (semi)transaction types. in regard to ERC-4337 we're calling them Operaions. 
+we introduce two new (semi)transaction types. in regard to ERC-4337 we're calling them UserOperaions or simply Operations. 
  ### Operation Struct:
     type Operation struct {
       ExtensionID	string
       To       Address
       Gas      uint
+      GasManagementData []byte
       Data     []byte
       Sig	     []byte
-      BlockHash  []byte // block hash upon op submission to pool
+      BlockHash  []byte // block hash upon operation submission to pool //must be a finalized block
     }
  ### PostOperation Struct:
     type PostOp struct {
@@ -88,18 +91,28 @@ the ProcessedBlockHash and RULE 1 also provide a defense against replay attacks,
   
 
 ## Incentive Mechanisms (TBD) :
-middle nodes run Extenstions, since the Extensions work as provers in this architecture, middle nodes need to be paid fairly.
+middle nodes run Extenstions, since middle nodes work as provers and also verifiers in this architecture, middle nodes need to be paid fairly.
 
 users also want their Operations processed for a predictable fee.
  
-the gas fee can be paid by the user directly or be sponsered by another entity, all we need is an ERC4337 incentive flow and users commitment to a fee, this brings up a need for a singleton entrypoint-like contract we call it consensus contract. we'll be utilizing this contract to distribute rewards and gas, stake/slash incentive system etc.
+the gas fee can be paid by the user directly or be sponsered by another entity, all we need is an ERC4337 incentive flow and users commitment to a fee, this brings up a need for a singleton entrypoint-like contract we call it Consensus Contract. we'll be utilizing this contract to distribute rewards and gas, stake/slash incentive system etc.
 
+### Consensus Contract : 
+ there would be a singleton Consensus Contract, this contract :
+  
+* keeps track of submitter in each slot(epoch) -> noodes run a deterministic leader election algorithm (like the XOR check), consensus contract manages the compensation of middle nodes
+* Fee and Reward Distribution
+* stake/slash management
+* Proof Validation
+* Dispute Resolution
+
+  
 ## Proof Formats and Trust Minimization : 
  the proof system must:
 
-* Allow Extensions (Provers) to prove correct processing of an Operation.
+* generate efficient proofs and propagete them 
 
-* Enable Middle Nodes (Verifiers) to validate proofs deterministically.
+* Enable Middle Nodes to validate proofs deterministically.
 
 * Avoid reliance on central trust.
 
@@ -111,12 +124,11 @@ the gas fee can be paid by the user directly or be sponsered by another entity, 
 
    #### standard Proof object: 
       type Proof struct {
-      ProofType     string            // e.g., "Groth16"
       ExtensionID   string            // erc4337
       Inputs        map[string][]byte // Public inputs
       Output        []byte            // Post-processed result data (e.g., calldata)
       ProofData     []byte            // The proof itself (binary blob)
-      Metadata      map[string]string // Optional metadata (versioning, etc.) MUST include "CircuitHash"
+      Metadata      map[string]string // Optional metadata (versioning, etc.) 
       }
     
 
@@ -173,114 +185,111 @@ Nodes SHOULD rate limit verification requests per peer.
   ### Validity Attack protection : 
    how can we guarantee that: 1. The Extension logic is exactly the same logic other nodes expect for that ExtensionID? 2. The output and proof are produced by an approved implementation, not a malicious or buggy variant?
 
-   we'll be using ZK Circuit Commitment committing each ExtensionID to:
-* One specific ZK circuit definition 
-* One verifying key 
-
+   we'll be using a ZK-wasm with a single, universal Verification Key and a Extension Registry Smart Contract
+   
 This ensures all proofs are generated only with that circuit. Every Middle Node can deterministically verify them and that there is no ambiguity about what code was executed.
- ##### these would be a registry contract and a registry mapping like below : 
-    ExtensionID → {CircuitHash, VerifyingKeyHash, ProofType, VerifierMetadata}
+## Extension Registry Smart Contract 
+	
+ ##### There MUST be a Registry Smart Contract that maintains the below mapping : 
+    ExtensionID → {[]wasm_bytecode, metadataURI, isUniversal, verifierMetadata}
 
 Middle nodes MUST only accept Operations referencing a known ExtensionID
-Middle nodes MUST Only accept proofs that declare the circuitHash and are verified against the verifying key hash
-Middle Nodes MUST check : proof.Metadata["CircuitHash"] == registry[proof.ExtensionID].circuitHash (before verifying)
+Middle Nodes MUST check : (TBD)
 
 #### Extension Registry Flow : 
 two parties involved : Extension dev and Registry Smart Contract
 
-1. Developer Prepares the Extension, the extension should be compilable to an arithmetic circuit (R1CS/QAP)
-2. serializeed the constraint system to a canonical blob.
+1. Developer Prepares the Extension, the extension should be compilable WebAssembly
+2. serializee .wasm to a canonical blob.
       * what do i mean by canonical blob ?
         A byte-serialized representation of a build artifact that every Middle Node can hash to the same value. we use WASM
         we MIGHT define a VerifierBinary struct in our design :
 
-            type VerifierBinary struct {
-            BinaryFormat string // e.g., "wasm", "solidity", "elf"
-            BinaryData []byte
-            BinaryHash []byte
-             }
+	developers have 2 Chooses over their Proof System design :
+		1. Universal mode: Runtime uses a single global VK
+   		2. Custom mode:  custom VK -> Having a VK per Extension stored in the on-chain Registry Contract. Nodes retrieve the VK and cache it locally.
 
-
-
-3. Trusted Setup (if needed): run trusted setup to generate proving/verifying keys.
-
-4. Hashing
-
-       circuitHash = keccak256(r1cs_blob)
-       verifyingKeyHash = keccak256(serialized_verifying_key)
+       VerificationMode { Universal, Custom }
    
-6. Verifier Metadata curve info, SNARK flavor ..
-7. ExtensionID: it should be a unique string 
+   		struct verifierMetadata {
+   		 VerificationMode mode;      // Universal or Custom VK
+  		  bytes zkSystem;              // e.g., "Groth16", "Plonk", "STARK"
+   		  bytes verificationKey;       // Empty if using universal VK
+   		  string verifierURI;           // Optional off-chain verifier metadata
+			}
 
-8. calling the registerExtension function of Registry Contract
+   		struct Extension {
+		    	address developer;           // Owner / registrant
+   			bytes32 extensionID;         // keccak256(wasmBinary)
+   			 bytes wasm_bytecode;              // Hash of full WASM binary
+    			verifierMetadata verifier;       // Verification metadata
+    			string metadataURI;          // Human-readable info (docs, schema)
+    			uint256 registeredAt;        // Block timestamp
+			}
    
-       function registerExtension(
-       string calldata extensionId,
-       bytes32 circuitHash,
-       bytes32 verifyingKeyHash,
-       string calldata proofType,
-       bytes calldata verifierMetadata,
-       ) external;
+* To ensure all nodes get the same wasm_bytecode, WASM builds must be fully reproducible. A deterministic WASM toolchain and Pre-deployment CI pipeline that publishes a Merkleized build manifest is needed!
+
+
+
+
+4. ExtensionID: it should be a unique string 
+
+5. calling the registerExtension function of Registry Contract
    
-Registry Contract MUST store a mapping of ExtensionID to ExtensionMetadata 
-               
-      mapping(string => ExtensionMetadata)
-      
-Extension Metadata struct COULD be : 
-
-       ExtensionMetadata {
-       bytes32 circuitHash;
-       bytes32 verifyingKeyHash;
-       string proofType;
-       bytes verifierMetadata;
-
-     }
+   	    function registerExtension(
+   		address developer;
+   		string calldata extensionId,
+   		bytes []wasm_bytecode
+   		bytes calldata metadataURI
+		bytes calldata verifierMetadata,
+		uint256 registeredAt;        // Block timestamp
+   		) external;
 
 ******* After this point *********
 
-Any node or user can query the registry on-chain to get the canonical circuit commitment and verifying key commitment for any ExtensionID.
+Any node or user can query the registry on-chain to get the canonical wasm bytecode.
 
 ### Middle Node Adding an Extension (Middle Node Onboarding)
   Imagine you are operating a Middle Node and want to add a new Extension to your already working set of Extensions (Fig. 1)
  1. query the on-chain registry -> GET ExtensionMetadata(extensionID)
- 2. obtain verifier Code (could be a smart contract address) & Verifying Key
- 3. acquire the Extension code and compile it to .wasm
- 4. Store Extension Locally
- 5. Store Extension Metadata Locally :
+ 2. acquire the Extension code and compile it to .wasm
+ 3. Store Extension Locally
+ 4. Store Extension Metadata Locally :
  
         json {
         "ExtensionID": "erc4337-bundler-v1",
-         "CircuitHash": "0xabc123...",
-         "VerifyingKeyHash": "0xdef456...",
-         "ProofType": "Groth16",
         "VerifierMetadata": {...},
-        "VerifierPath": "/extensions/erc4337-bundler-v1/verifier", or address : "0x....",
-        "VerifyingKeyPath": "/extensions/erc4337-bundler-v1/vk",
+    	"Metadata": {...},
         "Extension Dir": "/extensions/..."
         }
     
-  6. modify the MiddleNode config file to register your extension, or run the register command (TBD)
+  5. modify the MiddleNode config file to register your extension, or run the register command (TBD)
 
 ### Operation Execution Flow and proof of honest Extension : 
 
-  When a node and one of its extensions need to perform a task, we follows this process:
+  When a node and one of its extensions need to process a transaction(operation), we follows this process:
 
-   1.The node starts with a known initial state (e.g., a hash of the current Operation, Extension Network-Wide state). (State TBD)
+   1.The node starts with a known initial state (e.g., a hash of the current Operation, Extension Network-Wide state, Ethereum L1 state). (State TBD)
 
    2.Execute Program: middle node runs the WASM Extension and calls some functions, which take the initial state and some inputs, and produces a new state.
+* Loads the specific WASM binary for the requested ExtensionID.
+* Executes the binary inside its zk-WASM runtime.
+* The runtime executes the code and automatically outputs the final ZKP.
 
-   3.Generate Proof: The middle node uses the execution trace as a witness. It feeds the witness and the Proving Key (PK) into a ZKP library (like a SNARK or STARK prover) to generate a compact proof.
 
+
+   3.local verification of Extension proof
+  
+  * The PostOp.Proof is verified against the single, universal Verification Key of the zk-WASM runtime. The public inputs for this verification must now include the wasm_bytecode_hash that was executed
    
-   *Extension MUST return a proof with every call 
-   
-   4. local verification of Extension proof
-   
-   5.Network Verification
-   The middle node then broadcasts its claimed new state(PostOp) along with the ZKP to the network.
+   4.Network Verification
+  
+   The middle node then broadcasts its claimed PostOp along with the ZKP to the network.
    Other nodes act as verifiers. They do not re-run the program. They simply run the highly efficient ZKP verification algorithm using the Verification Key (VK), the initial state, the new state, and the proof.
-   *If the proof is valid, the network accepts the new state as legitimate. 
-   *If a malicious node were to tamper with the Extension code or fake the result, it would be unable to produce a valid proof, and the network would reject its update
+  
+*If the proof is valid, the network accepts the new state as legitimate.
+
+*If a malicious node were to tamper with the Extension code or fake the result, it would be unable to produce a valid proof, and the network would reject its update
    
 
 
@@ -357,18 +366,16 @@ Any node or user can query the registry on-chain to get the canonical circuit co
 ### ReputationScore formula + Design on-chain dispute resolution -> TBD 
 
 
-## Extension Registry Smart Contract :
-
 ## Final Bridge to L1; Consensus over Submission
   who gets to submit the final tx to the mainnet mempool?
-  in each slot(12s) there would be only one submitter and only that one is eligible for compensation,
-  there would be a singleton Consensus Contract this contract :
-* keeps track of submitter in each slot(epoch) -> noodes run a deterministic leader election algorithm (like the XOR check), consensus contract manages the compensation of middle nodes
-* Fee and Reward Distribution
-* stake/slash management
-* Proof Validation
-     
-   
+  in each slot(12s) there would be only one submitter and only that one is eligible for compensation, (leader selection)
+  The leader submits the PostOp (or a batch of them) directly to the Consensus Contract. The contract then verifies the on-chain portion of the proof (if any) and uses the PostOp.Data to perform calls to other contracts. 
+	
+ ### the leader selection mechanism
+  TBD
+
+ ### fee and payment flow
+ 
   
 ## Specifications: 
   ### P2P stack: 
