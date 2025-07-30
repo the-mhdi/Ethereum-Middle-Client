@@ -1,4 +1,4 @@
-### Ethereum Middle client Concept, Modular Ethereum With Extensions; A Protocol-Adjacent Overlay Network for Verifiable Off-Chain Computation on Ethereum and Offloading specialized, semi-critical logics from the Execution Layer client.
+### Ethereum Middle client Concept, Modular Ethereum With Extensions; A Protocol-Adjacent Overlay Network for Verifiable Off-Chain Computation on Ethereum.
 
 A standard interface for adding custom logics/extensions to Ethereum nodes with no concensus layer change, no hard fork, no L2!
 
@@ -386,6 +386,9 @@ Any node or user can query the registry on-chain to get the canonical wasm bytec
 
 NOTICE : 
 reducing txn congestion on base layer in not the direct intent of this design but it can be utilized to also act as an L2 rollup 
+
+TAGS: 
+Layer 1.5
 
 Data Availability Proofs are optional. 
 
