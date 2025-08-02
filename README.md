@@ -64,9 +64,9 @@ we introduce two new (semi)transaction types. in regard to ERC-4337 we're callin
 Middle RPC Nodes receive operations from users, they perform simple verifcation and reputaions management then the Operation would be submitted to the public mempool, middle nodes that have respective Extension to proccess that operation will pick it up, the operation would be processed and the post-prossessed operation will be sumbitted to another mempool called post-mempool.
 
 
-so as shown on the diagram below the middle nodes manage and maintain to public p2p mempools: Operation p2p Mempool and PostOp p2p mempool
+so as shown on the diagram below the middle nodes manage and maintain two public mempools: Operation p2p Mempool and PostOp p2p mempool
 
-![Untitled Diagram drawio (2)](https://github.com/user-attachments/assets/d82a8de5-e489-4b50-adbe-1893887afba0)
+![Untitled Diagram (4)](https://github.com/user-attachments/assets/a9a374de-ff1e-4d60-a8d8-31bea588232a)
 
 
 
@@ -274,7 +274,7 @@ Any node or user can query the registry on-chain to get the canonical wasm bytec
    2.Execute Program: middle node runs the WASM Extension and calls some functions, which take the initial state and some inputs, and produces a new state.
 * Loads the specific WASM binary for the requested ExtensionID.
 * Executes the binary inside its zk-WASM runtime.
-* The runtime executes the code and automatically outputs the final ZKP.
+* The runtime executes the code and automatically outputs the final ZKP and PostOp.
 
 
 
