@@ -1,11 +1,11 @@
-### Ethereum Middle client Concept, Modular Ethereum With Extensions; A Protocol-Adjacent Overlay Network for Verifiable Off-Chain Computation on Ethereum.
+### Ethereum Middle client Concept, Modular Ethereum With Extensions; An L1-Adjacent Overlay Network for Verifiable Off-Chain Computation on Ethereum.
 
 A standard interface for adding custom logics/extensions to Ethereum nodes with no concensus layer change, no hard fork, no L2!
 
 
 it's a protocol-adjacent layer introducing a new type of ethereum clients with a new set of API endponts along side a custom transaction type with a unified p2p sub-pool that interacts directly with ethereum main public mempool each node on this network of new clients can have itsown set of Extensions.
 
-I define Extensions as protocol-aware customizable components , that can be used to perform complex computations and validations that would be costly for the EVM and on the other hand not reasonable to do a hardfork for, an example of such computations could be ERC-4337 Bundlers.
+I define Extensions as protocol-aware customizable components , that can be used to perform complex computations and validations that would be costly for the EVM and on the other hand not reasonable to do a hardfork for, an example of such computations could be L2 Sequencers, ERC-4337 Bundlers, etc.
 
 ![Untitled Diagram drawio (1)](https://github.com/user-attachments/assets/a76e0ebf-96c4-487f-95b5-303b1ce4fe00) Fig. 1
 
@@ -66,7 +66,8 @@ Middle RPC Nodes receive operations from users, they perform simple verifcation 
 
 so as shown on the diagram below the middle nodes manage and maintain two public mempools: Operation p2p Mempool and PostOp p2p mempool
 
-![Untitled Diagram (4)](https://github.com/user-attachments/assets/a9a374de-ff1e-4d60-a8d8-31bea588232a)
+![Untitled Diagram (5)](https://github.com/user-attachments/assets/a60fdd40-3b19-46e5-b893-c260a19d3ae0)
+
 
 
 
@@ -383,6 +384,135 @@ Any node or user can query the registry on-chain to get the canonical wasm bytec
   RLPx, DiscV5 and ENR are completely utilized.
    node MUST broadcast a Capability Advertisement Packet upon peer connection so they can advertise SupportedExtensions, SupportedProofTypes , MaxProofSize , FeeSchedule
 
+# Roadmap 
+## Phase 0 – Concept Finalization (Design & Research)
+Goal: Define the full architecture, state model, and security assumptions.
+
+#### Tasks:
+* Finalize architecture: Middle Nodes, Extensions, staking/slashing mechanism, dual mempool behavior
+* Decide state management:
+(a) Temporary state in Middle Layer only
+
+(b) Commit via blobs
+
+(c) Long-term vision with direct settlement on execution layer
+
+* Extension registry model: how they’re registered, discovered, and upgraded
+
+* Finalize proof format: zk-WASM → proof schema → on-chain verifier
+
+* Define Operation & PostOp transaction structure
+
+* Design P2P network behavior for Middle Layer
+
+* Write full specs (could be a proto-EIP or whitepaper)
+
+ *** Deliverable: 
+ Middle Layer Spec v1 + Updated diagrams
+
+## Phase 1 – Prototype & Local Testnet
+Goal: Minimal Middle Client and Extension execution working locally
+
+#### Tasks:
+* Build a lightweight Middle Client (Go)
+
+* Implement basic Operation processing (no zk yet, just execute Extension logic)
+
+* Simple Extension runtime (e.g., WASM runtime, single Extension)
+
+* Basic registry contract (stores Extension IDs)
+
+* Mock PostOp generation and verification flow
+
+* Start with centralized sequencer for test simplicity
+
+  *** Deliverable:
+
+Middle Client MVP
+
+One working Extension (e.g., ERC-4337 Bundler)
+
+
+## Phase 2 – zk-WASM Integration & Proof-Based Execution
+Goal: Replace trusted execution with zk-proofs
+
+#### Tasks:
+*  Integrate a zk-WASM runtime (zkWASM)
+
+*  Generate proof for Extension execution
+
+*  Deploy Consensus contract on Ethereum to validate PostOps
+
+* Add staking + slashing logic (Consensus Contract)
+
+* Start building gossip protocol for Middle Layer P2P
+
+**** Deliverable:
+
+zk-enabled Middle Client
+
+PostOp verified on L1
+
+
+## Phase 3 – Decentralized Middle Layer Network
+Goal: Multiple nodes, decentralized Operations & PostOps, incentivization
+
+#### Tasks:
+* Implement dual mempool (Operation Pool + PostOp Pool)
+
+* Fully decentralized gossip network for Middle Clients
+
+* Robust staking, reward distribution, and slashing
+
+* Support multiple Extensions running in parallel
+
+* Optional blob-based data availability
+
+**** Deliverable:
+
+Public Middle Layer Testnet
+
+At least 3–4 Extensions running
+
+Metrics: latency, throughput, verification costs
+
+## Phase 4 – L2 as Extension & Composability
+Goal: Prove Middle Layer can unify fragmented scaling solutions
+
+#### Tasks:
+* Wrap an existing zkRollup or bridge logic as an Extension
+
+* Demonstrate cross-L2 interoperability
+
+* Compose Extensions (one Extension calling another)
+
+* Document modular deployment process for developers
+
+**** Deliverable:
+
+Demo: L2 interaction via Middle Client
+
+
+## Phase 5 – Direct Settlement on L1 (No Registry/Consensus Contracts)
+Goal: Native transaction type on Ethereum Execution Layer
+
+ Approach:
+* Define a new transaction type with embedded middlenode proof data(MiddleOpTx)
+
+* Consensus layer changes not needed if verifier logic is handled in Execution layer
+
+*  Modify Ethereum execution client to:
+
+Parse MiddleOpTx
+
+Verify proof directly
+
+Apply resulting state changes natively
+
+* Remove external registry and staking contracts (nodes rely on protocol-native staking)
+
+* This effectively merges Middle Layer into Ethereum’s protocol → L1.5 becomes part of L1
+
 
 NOTICE : 
 reducing txn congestion on base layer in not the direct intent of this design but it can be utilized to also act as an L2 rollup 
@@ -390,7 +520,7 @@ reducing txn congestion on base layer in not the direct intent of this design bu
 TAGS: 
 Layer 1.5
 
-Data Availability Proofs are optional. 
+
 
 
 
